@@ -21,7 +21,7 @@ data "aws_ami" "al2023" {
 # ── Security Group cho Bastion ────────────────────────────────────────────────
 resource "aws_security_group" "bastion" {
   name        = "${local.name}-bastion-sg"
-  description = "Security group cho bastion EC2 chạy registry:2"
+  description = "Security group for bastion EC2 running registry:2"
   vpc_id      = var.vpc_id
 
   # Inbound: only allow registry port from within VPC

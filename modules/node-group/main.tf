@@ -88,7 +88,7 @@ resource "aws_security_group" "nodes" {
 
   # Pull từ local registry (bastion)
   egress {
-    description = "Pull từ local registry"
+    description = "Pull from local registry"
     from_port   = var.local_registry_port
     to_port     = var.local_registry_port
     protocol    = "tcp"

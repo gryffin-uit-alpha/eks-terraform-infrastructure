@@ -15,7 +15,7 @@ module "vpc" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   cluster_name         = var.cluster_name
-  single_nat_gateway   = true  # 1 NAT GW dùng chung (production cost saving)
+  single_nat_gateway   = true # 1 NAT GW dùng chung (production cost saving)
 }
 
 # ── [2] Velero S3 (cần ARN trước khi tạo IAM policy) ─────────────────────────
@@ -54,9 +54,8 @@ module "eks" {
 
   endpoint_public_access       = var.cluster_endpoint_public_access
   endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
-
-  depends_on = [module.iam]
 }
+
 
 # ── [5] IAM (cần OIDC từ EKS, bucket ARN từ Velero, SQS ARN từ Karpenter) ───
 # Lưu ý: IAM role cho EKS cluster cần tồn tại TRƯỚC KHI tạo EKS cluster.
@@ -71,8 +70,7 @@ module "iam" {
   aws_account_id = local.account_id
 
   # OIDC — lấy từ EKS module (tạo sau khi cluster up)
-  oidc_provider_url = module.eks.oidc_provider_url
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
 
   # Velero bucket ARN (để scope policy)
   velero_bucket_arn = module.velero_infra.bucket_arn
@@ -89,7 +87,7 @@ module "bastion" {
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   vpc_cidr              = var.vpc_cidr
-  subnet_id             = module.vpc.private_subnet_ids[0]  # AZ đầu tiên
+  subnet_id             = module.vpc.private_subnet_ids[0] # AZ đầu tiên
   instance_type         = var.bastion_instance_type
   registry_port         = var.local_registry_port
   instance_profile_name = module.iam.bastion_instance_profile_name
@@ -99,13 +97,13 @@ module "bastion" {
 module "node_group" {
   source = "./modules/node-group"
 
-  project_name   = var.project_name
-  environment    = var.environment
-  cluster_name   = var.cluster_name
-  subnet_ids     = module.vpc.private_subnet_ids
-  node_role_arn  = module.iam.eks_node_role_arn
-  vpc_id         = module.vpc.vpc_id
-  vpc_cidr       = var.vpc_cidr
+  project_name  = var.project_name
+  environment   = var.environment
+  cluster_name  = var.cluster_name
+  subnet_ids    = module.vpc.private_subnet_ids
+  node_role_arn = module.iam.eks_node_role_arn
+  vpc_id        = module.vpc.vpc_id
+  vpc_cidr      = var.vpc_cidr
 
   cluster_security_group_id = module.eks.cluster_security_group_id
 
@@ -121,3 +119,29 @@ module "node_group" {
 
   depends_on = [module.eks, module.bastion]
 }
+
+# ── [8] Core EKS Add-ons (đợi Node Group ready để tránh timeout) ───────────────
+resource "aws_eks_addon" "coredns" {
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "coredns"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [module.node_group]
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "kube-proxy"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [module.node_group]
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "vpc-cni"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [module.node_group]
+}
+

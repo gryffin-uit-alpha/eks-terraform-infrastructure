@@ -34,7 +34,7 @@ output "cluster_certificate_authority_data" {
 
 output "oidc_provider_arn" {
   description = "ARN của OIDC provider (dùng cho IRSA)"
-  value       = module.eks.oidc_provider_arn
+  value       = module.iam.oidc_provider_arn
 }
 
 # ── Bastion / Registry ────────────────────────────────────────────────────────
@@ -51,12 +51,12 @@ output "local_registry_endpoint" {
 # ── IAM ───────────────────────────────────────────────────────────────────────
 output "karpenter_irsa_role_arn" {
   description = "ARN của IAM Role cho Karpenter (IRSA)"
-  value       = module.iam.karpenter_irsa_role_arn
+  value       = module.iam.karpenter_role_arn
 }
 
 output "velero_irsa_role_arn" {
   description = "ARN của IAM Role cho Velero (IRSA)"
-  value       = module.iam.velero_irsa_role_arn
+  value       = module.iam.velero_role_arn
 }
 
 # ── Velero S3 ─────────────────────────────────────────────────────────────────

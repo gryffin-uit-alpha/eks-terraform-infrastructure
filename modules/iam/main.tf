@@ -1,6 +1,6 @@
 locals {
   name        = "${var.project_name}-${var.environment}"
-  create_oidc = var.cluster_oidc_issuer_url != ""
+  create_oidc = true
 }
 
 # ── OIDC Provider (created after EKS cluster) ─────────────────────────────────
