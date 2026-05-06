@@ -108,7 +108,7 @@ variable "node_group_disk_size_gb" {
 variable "bastion_instance_type" {
   description = "EC2 instance type cho bastion host chạy registry:2"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"  # Free tier eligible
 }
 
 variable "local_registry_port" {
