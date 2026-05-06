@@ -124,6 +124,21 @@ resource "aws_security_group" "nodes" {
   tags = { Name = "${local.name}-nodes-sg" }
 }
 
+# ── CRITICAL FIX: Cho phép kubelet reach EKS private endpoint ─────────────────
+# EKS private endpoint là ENI trong VPC, traffic kubelet → cluster SG port 443.
+# Đặt rule ở đây (node-group module) vì đã có cluster_security_group_id,
+# tránh circular dependency: cluster SG tạo trước node SG.
+resource "aws_security_group_rule" "cluster_ingress_from_nodes" {
+  description              = "Allow worker nodes to reach EKS API server (private endpoint)"
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = var.cluster_security_group_id
+  source_security_group_id = aws_security_group.nodes.id
+}
+
+
 # ── Custom Launch Template ─────────────────────────────────────────────────────
 resource "aws_launch_template" "nodes" {
   name        = "${local.name}-node-lt"

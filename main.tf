@@ -126,7 +126,22 @@ resource "aws_eks_addon" "coredns" {
   addon_name                  = "coredns"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  depends_on                  = [module.node_group]
+
+  # CoreDNS là Deployment → không tự tolerate custom taints như DaemonSet.
+  # Node group có taint node-group=managed:NoSchedule nên phải thêm toleration
+  # để CoreDNS pods có thể schedule lên các managed nodes.
+  configuration_values = jsonencode({
+    tolerations = [
+      {
+        key      = "node-group"
+        value    = "managed"
+        effect   = "NoSchedule"
+        operator = "Equal"
+      }
+    ]
+  })
+
+  depends_on = [module.node_group]
 }
 
 resource "aws_eks_addon" "kube_proxy" {
