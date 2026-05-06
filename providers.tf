@@ -21,12 +21,15 @@ provider "aws" {
   skip_metadata_api_check     = true
   skip_requesting_account_id  = false
 
-  # Increase retries and timeout for slow network
-  max_retries = 3
+  # Aggressive retries for flaky corporate proxy
+  max_retries = 10
 
-  # Disable SSL verification (corporate proxy issue)
+  # Disable SSL verification (corporate proxy MITM)
   # WARNING: Only use behind trusted corporate proxy
   insecure = true
+
+  # Custom retry configuration for proxy issues
+  retry_mode = "adaptive"
 
   default_tags {
     tags = {
