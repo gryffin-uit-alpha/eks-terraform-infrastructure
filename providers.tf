@@ -16,6 +16,18 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
+  # Workaround for corporate proxy with SSL interception
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = false
+
+  # Increase retries and timeout for slow network
+  max_retries = 3
+
+  # Disable SSL verification (corporate proxy issue)
+  # WARNING: Only use behind trusted corporate proxy
+  insecure = true
+
   default_tags {
     tags = {
       Project     = var.project_name
