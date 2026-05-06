@@ -32,8 +32,8 @@ locals {
             insecure_skip_verify = true
   CONTAINERD
 
-  # User data: cấu hình containerd trước khi join cluster
-  user_data = base64encode(<<-USERDATA
+  # User data bash script (sẽ được convert sang MIME bởi cloudinit_config)
+  user_data_script = <<-USERDATA
     #!/bin/bash
     set -euo pipefail
     exec > >(tee /var/log/node-userdata.log) 2>&1
@@ -46,11 +46,19 @@ locals {
 
     systemctl restart containerd
     echo "=== containerd đã restart với local registry mirror ==="
-
-    # Bootstrap node vào EKS cluster
-    /etc/eks/bootstrap.sh '${var.cluster_name}'
   USERDATA
-  )
+}
+
+# ── Cloudinit Config: Convert bash script sang MIME multipart ─────────────────
+# EKS Managed Node Group yêu cầu MIME format để merge với bootstrap script của AWS
+data "cloudinit_config" "node_userdata" {
+  gzip          = false
+  base64_encode = true
+
+  part {
+    content_type = "text/x-shellscript"
+    content      = local.user_data_script
+  }
 }
 
 # ── Security Group cho Worker Nodes ──────────────────────────────────────────
@@ -124,7 +132,8 @@ resource "aws_launch_template" "nodes" {
   image_id      = null # EKS Managed Node Group tự chọn AMI
   instance_type = null # Sẽ override trong node group
 
-  user_data = local.user_data
+  # Sử dụng cloudinit_config để tự động convert sang MIME multipart
+  user_data = data.cloudinit_config.node_userdata.rendered
 
   vpc_security_group_ids = [aws_security_group.nodes.id]
 
