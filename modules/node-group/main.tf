@@ -121,6 +121,15 @@ resource "aws_security_group" "nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # SSH for Git operations (ArgoCD accessing GitHub)
+  egress {
+    description = "SSH for Git"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = { Name = "${local.name}-nodes-sg" }
 }
 
