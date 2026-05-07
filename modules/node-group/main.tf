@@ -76,6 +76,20 @@ resource "aws_security_group" "nodes" {
     self        = true
   }
 
+  # CRITICAL FIX: Cross-node pod-to-pod communication
+  # Self-referencing rule above is insufficient for AWS VPC CNI secondary IPs.
+  # When pods on different nodes communicate, AWS evaluates source as secondary IP,
+  # which may not match SG-to-SG self-referencing logic.
+  # This rule explicitly allows ALL traffic from VPC CIDR (where all pod IPs reside).
+  # Without this, cross-node pod-to-pod traffic is BLOCKED (same-node works fine).
+  ingress {
+    description = "Pod to pod across nodes (VPC CIDR)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
   # Control plane to nodes
   ingress {
     description     = "Control plane to nodes"
