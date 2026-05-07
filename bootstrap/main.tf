@@ -26,7 +26,7 @@ provider "aws" {
 
 resource "aws_s3_bucket" "tfstate" {
   bucket        = var.state_bucket_name
-  force_destroy = false   
+  force_destroy = false
 
   tags = var.project_tags
 }
@@ -72,8 +72,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
 
 resource "aws_dynamodb_table" "tfstate_lock" {
   name         = var.lock_table_name
-  billing_mode = "PAY_PER_REQUEST"  
-  hash_key     = "LockID"         
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"

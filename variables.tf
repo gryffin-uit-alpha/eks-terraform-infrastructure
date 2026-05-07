@@ -64,7 +64,7 @@ variable "cluster_version" {
 variable "cluster_endpoint_public_access" {
   description = "Cho phép public access vào EKS API endpoint (false = private only)"
   type        = bool
-  default     = false
+  default     = true  # Enable for development access
 }
 
 variable "cluster_endpoint_public_access_cidrs" {
@@ -77,7 +77,7 @@ variable "cluster_endpoint_public_access_cidrs" {
 variable "node_group_instance_types" {
   description = "EC2 instance types cho managed node group"
   type        = list(string)
-  default     = ["t3.small"]  # Free tier eligible
+  default     = ["t3.small"] # Free tier eligible
 }
 
 variable "node_group_desired_size" {
@@ -108,7 +108,7 @@ variable "node_group_disk_size_gb" {
 variable "bastion_instance_type" {
   description = "EC2 instance type cho bastion host chạy registry:2"
   type        = string
-  default     = "t3.small"  # Free tier eligible
+  default     = "t3.small" # Free tier eligible
 }
 
 variable "local_registry_port" {

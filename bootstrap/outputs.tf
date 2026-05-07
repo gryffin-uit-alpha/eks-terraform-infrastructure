@@ -8,7 +8,7 @@ output "lock_table_name" {
 
 output "backend_tf_snippet" {
   description = "Copy to terraform/backend.tf"
-  value = <<-EOT
+  value       = <<-EOT
     terraform {
       backend "s3" {
         bucket         = "${aws_s3_bucket.tfstate.bucket}"
