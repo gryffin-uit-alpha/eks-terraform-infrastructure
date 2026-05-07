@@ -38,6 +38,12 @@ locals {
     set -euo pipefail
     exec > >(tee /var/log/node-userdata.log) 2>&1
 
+    echo "=== Disable source/destination check for VPC CNI ==="
+    INSTANCE_ID=$(ec2-metadata --instance-id | cut -d ' ' -f 2)
+    REGION=$(ec2-metadata --availability-zone | cut -d ' ' -f 2 | sed 's/[a-z]$//')
+    aws ec2 modify-instance-attribute --instance-id "$INSTANCE_ID" --no-source-dest-check --region "$REGION"
+    echo "=== Source/dest check disabled for $INSTANCE_ID ==="
+
     echo "=== Cấu hình containerd mirror ==="
     mkdir -p /etc/containerd
     cat > /etc/containerd/config.toml <<'CONTAINERD_EOF'
@@ -198,6 +204,7 @@ resource "aws_launch_template" "nodes" {
   # Sử dụng cloudinit_config để tự động convert sang MIME multipart
   user_data = data.cloudinit_config.node_userdata.rendered
 
+  # CRITICAL FIX: Source/dest check disabled via user_data script (not supported in network_interfaces)
   vpc_security_group_ids = [aws_security_group.nodes.id]
 
   block_device_mappings {
