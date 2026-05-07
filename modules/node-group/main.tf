@@ -94,6 +94,20 @@ resource "aws_security_group" "nodes" {
     security_groups = [var.cluster_security_group_id]
   }
 
+  # CRITICAL FIX P1: Kubernetes Service CIDR ingress
+  # EKS Service CIDR (172.20.0.0/16) is separate from VPC CIDR (10.0.0.0/16).
+  # AWS Security Groups evaluate packets at hypervisor level BEFORE iptables rewrite,
+  # so they see the Service IP (172.20.x.x), not the Pod IP after DNAT.
+  # Self-referencing rule only covers Pod-to-Pod traffic within VPC CIDR.
+  # This rule is MANDATORY for Pod-to-Service communication (ArgoCD, etc).
+  ingress {
+    description = "Kubernetes Service CIDR - pod-to-service TCP"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["172.20.0.0/16"]
+  }
+
   # Pull từ local registry (bastion)
   egress {
     description = "Pull from local registry"
@@ -128,6 +142,17 @@ resource "aws_security_group" "nodes" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # CRITICAL FIX P1: Kubernetes Service CIDR egress (return traffic)
+  # Allows return traffic from Service endpoints back to pods.
+  # Required for stateful connections initiated by pods to Services.
+  egress {
+    description = "Kubernetes Service CIDR - return traffic"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["172.20.0.0/16"]
   }
 
   tags = { Name = "${local.name}-nodes-sg" }
