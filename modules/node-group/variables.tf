@@ -1,3 +1,36 @@
+variable "node_group_name" {
+  description = "Name suffix for the node group"
+  type        = string
+}
+
+variable "taints" {
+  description = "List of taints to apply to the nodes"
+  type = list(object({
+    key    = string
+    value  = string
+    effect = string
+  }))
+  default = []
+}
+
+variable "labels" {
+  description = "Map of labels to apply to the nodes"
+  type        = map(string)
+  default     = {}
+}
+
+variable "create_worker_security_group" {
+  description = "Whether to create a new security group for worker nodes"
+  type        = bool
+  default     = false
+}
+
+variable "worker_security_group_id" {
+  description = "Existing security group ID to use for worker nodes (if create_worker_security_group is false)"
+  type        = string
+  default     = ""
+}
+
 variable "project_name" {
   description = "Name of the project"
   type        = string

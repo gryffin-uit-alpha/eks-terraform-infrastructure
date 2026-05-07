@@ -94,8 +94,12 @@ module "bastion" {
 }
 
 # ── [7] Node Group (cần EKS + IAM + Bastion IP) ──────────────────────────────
-module "node_group" {
+# ── [7a] System Node Group (Infrastructure: ArgoCD, Traefik, etc.) ─────────────
+module "node_group_system" {
   source = "./modules/node-group"
+
+  node_group_name              = "system"
+  create_worker_security_group = true
 
   project_name  = var.project_name
   environment   = var.environment
@@ -107,13 +111,105 @@ module "node_group" {
 
   cluster_security_group_id = module.eks.cluster_security_group_id
 
-  instance_types = var.node_group_instance_types
-  desired_size   = var.node_group_desired_size
-  min_size       = var.node_group_min_size
-  max_size       = var.node_group_max_size
-  disk_size_gb   = var.node_group_disk_size_gb
+  instance_types = ["m7i-flex.large"]
+  desired_size   = 2
+  min_size       = 2
+  max_size       = 4
+  disk_size_gb   = 50
 
-  # CRITICAL: Bastion IP inject vào containerd config
+  taints = [{
+    key    = "role"
+    value  = "system"
+    effect = "NO_SCHEDULE"
+  }]
+
+  labels = {
+    role     = "system"
+    workload = "infrastructure"
+  }
+
+  local_registry_ip   = module.bastion.private_ip
+  local_registry_port = var.local_registry_port
+
+  depends_on = [module.eks, module.bastion]
+}
+
+# ── [7b] Monitoring Node Group (Observability: Prometheus, Loki, etc.) ────────
+module "node_group_monitoring" {
+  source = "./modules/node-group"
+
+  node_group_name              = "monitoring"
+  create_worker_security_group = false
+  worker_security_group_id     = module.node_group_system.worker_security_group_id
+
+  project_name  = var.project_name
+  environment   = var.environment
+  cluster_name  = var.cluster_name
+  subnet_ids    = module.vpc.private_subnet_ids
+  node_role_arn = module.iam.eks_node_role_arn
+  vpc_id        = module.vpc.vpc_id
+  vpc_cidr      = var.vpc_cidr
+
+  cluster_security_group_id = module.eks.cluster_security_group_id
+
+  instance_types = ["m7i-flex.large"]
+  desired_size   = 2
+  min_size       = 2
+  max_size       = 4
+  disk_size_gb   = 50
+
+  taints = [{
+    key    = "role"
+    value  = "monitoring"
+    effect = "NO_SCHEDULE"
+  }]
+
+  labels = {
+    role     = "monitoring"
+    workload = "observability"
+  }
+
+  local_registry_ip   = module.bastion.private_ip
+  local_registry_port = var.local_registry_port
+
+  depends_on = [module.eks, module.bastion]
+}
+
+# ── [7c] Application Node Group (User Workloads) ──────────────────────────────
+module "node_group_app" {
+  source = "./modules/node-group"
+
+  node_group_name              = "app"
+  create_worker_security_group = false
+  worker_security_group_id     = module.node_group_system.worker_security_group_id
+
+  project_name  = var.project_name
+  environment   = var.environment
+  cluster_name  = var.cluster_name
+  subnet_ids    = module.vpc.private_subnet_ids
+  node_role_arn = module.iam.eks_node_role_arn
+  vpc_id        = module.vpc.vpc_id
+  vpc_cidr      = var.vpc_cidr
+
+  cluster_security_group_id = module.eks.cluster_security_group_id
+
+  instance_types = ["c7i-flex.large"]
+  desired_size   = 2
+  min_size       = 2
+  max_size       = 10
+  disk_size_gb   = 50
+
+  taints = [{
+    key    = "role"
+    value  = "app"
+    effect = "NO_SCHEDULE"
+  }]
+
+  labels = {
+    role     = "application"
+    workload = "app"
+  }
+
   local_registry_ip   = module.bastion.private_ip
   local_registry_port = var.local_registry_port
 
@@ -130,18 +226,20 @@ resource "aws_eks_addon" "coredns" {
   # CoreDNS là Deployment → không tự tolerate custom taints như DaemonSet.
   # Node group có taint node-group=managed:NoSchedule nên phải thêm toleration
   # để CoreDNS pods có thể schedule lên các managed nodes.
+  # CoreDNS must schedule on system-ng
   configuration_values = jsonencode({
     tolerations = [
       {
-        key      = "node-group"
-        value    = "managed"
+        key      = "role"
+        value    = "system"
         effect   = "NoSchedule"
         operator = "Equal"
       }
     ]
+    replicaCount = 2
   })
 
-  depends_on = [module.node_group]
+  depends_on = [module.node_group_system]
 }
 
 resource "aws_eks_addon" "kube_proxy" {
@@ -149,7 +247,7 @@ resource "aws_eks_addon" "kube_proxy" {
   addon_name                  = "kube-proxy"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  depends_on                  = [module.node_group]
+  depends_on                  = [module.node_group_system]
 }
 
 resource "aws_eks_addon" "vpc_cni" {
@@ -157,6 +255,6 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_name                  = "vpc-cni"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  depends_on                  = [module.node_group]
+  depends_on                  = [module.node_group_system]
 }
 

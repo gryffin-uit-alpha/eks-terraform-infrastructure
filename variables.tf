@@ -64,7 +64,7 @@ variable "cluster_version" {
 variable "cluster_endpoint_public_access" {
   description = "Cho phép public access vào EKS API endpoint (false = private only)"
   type        = bool
-  default     = true  # Enable for development access
+  default     = true # Enable for development access
 }
 
 variable "cluster_endpoint_public_access_cidrs" {

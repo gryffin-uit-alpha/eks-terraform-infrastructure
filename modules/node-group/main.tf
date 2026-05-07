@@ -1,5 +1,5 @@
 locals {
-  name             = "${var.project_name}-${var.environment}"
+  name             = "${var.project_name}-${var.environment}-${var.node_group_name}"
   registry_address = "${var.local_registry_ip}:${var.local_registry_port}"
 
   # containerd config.toml với mirror cho tất cả public registries
@@ -53,6 +53,8 @@ locals {
     systemctl restart containerd
     echo "=== containerd đã restart với local registry mirror ==="
   USERDATA
+
+  worker_sg_id = var.create_worker_security_group ? aws_security_group.nodes[0].id : var.worker_security_group_id
 }
 
 # ── Cloudinit Config: Convert bash script sang MIME multipart ─────────────────
@@ -69,7 +71,9 @@ data "cloudinit_config" "node_userdata" {
 
 # ── Security Group cho Worker Nodes ──────────────────────────────────────────
 resource "aws_security_group" "nodes" {
-  name        = "${local.name}-nodes-sg"
+  count = var.create_worker_security_group ? 1 : 0
+
+  name        = "${var.project_name}-${var.environment}-nodes-sg"
   description = "Security group cho EKS worker nodes"
   vpc_id      = var.vpc_id
 
@@ -175,21 +179,24 @@ resource "aws_security_group" "nodes" {
     cidr_blocks = ["172.20.0.0/16"]
   }
 
-  tags = { Name = "${local.name}-nodes-sg" }
+  tags = { Name = "${var.project_name}-${var.environment}-nodes-sg" }
 }
+
 
 # ── CRITICAL FIX: Cho phép kubelet reach EKS private endpoint ─────────────────
 # EKS private endpoint là ENI trong VPC, traffic kubelet → cluster SG port 443.
 # Đặt rule ở đây (node-group module) vì đã có cluster_security_group_id,
 # tránh circular dependency: cluster SG tạo trước node SG.
 resource "aws_security_group_rule" "cluster_ingress_from_nodes" {
+  count = var.create_worker_security_group ? 1 : 0
+
   description              = "Allow worker nodes to reach EKS API server (private endpoint)"
   type                     = "ingress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
   security_group_id        = var.cluster_security_group_id
-  source_security_group_id = aws_security_group.nodes.id
+  source_security_group_id = local.worker_sg_id
 }
 
 
@@ -205,7 +212,7 @@ resource "aws_launch_template" "nodes" {
   user_data = data.cloudinit_config.node_userdata.rendered
 
   # CRITICAL FIX: Source/dest check disabled via user_data script (not supported in network_interfaces)
-  vpc_security_group_ids = [aws_security_group.nodes.id]
+  vpc_security_group_ids = [local.worker_sg_id]
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -250,7 +257,7 @@ resource "aws_launch_template" "nodes" {
 # ── EKS Managed Node Group ────────────────────────────────────────────────────
 resource "aws_eks_node_group" "this" {
   cluster_name    = var.cluster_name
-  node_group_name = "${local.name}-managed-ng"
+  node_group_name = local.name
   node_role_arn   = var.node_role_arn
   subnet_ids      = var.subnet_ids
 
@@ -271,19 +278,25 @@ resource "aws_eks_node_group" "this" {
     version = aws_launch_template.nodes.latest_version
   }
 
-  # Taint node group này là "on-demand base" để Karpenter scale spot
-  taint {
-    key    = "node-group"
-    value  = "managed"
-    effect = "NO_SCHEDULE"
+  # NEW: Dynamic taints
+  dynamic "taint" {
+    for_each = var.taints
+    content {
+      key    = taint.value.key
+      value  = taint.value.value
+      effect = taint.value.effect
+    }
   }
 
-  labels = {
-    role        = "managed-node"
-    environment = var.environment
-  }
+  # NEW: Merged labels
+  labels = merge(
+    {
+      environment = var.environment
+    },
+    var.labels
+  )
 
-  tags = { Name = "${local.name}-managed-ng" }
+  tags = { Name = "${local.name}" }
 
   lifecycle {
     ignore_changes = [scaling_config[0].desired_size]

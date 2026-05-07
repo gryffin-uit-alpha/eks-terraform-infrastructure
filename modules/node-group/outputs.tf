@@ -13,9 +13,14 @@ output "node_group_status" {
   value       = aws_eks_node_group.this.status
 }
 
+output "worker_security_group_id" {
+  description = "ID of the security group used by worker nodes"
+  value       = local.worker_sg_id
+}
+
 output "node_security_group_id" {
   description = "Security group ID for the worker nodes"
-  value       = aws_security_group.nodes.id
+  value       = local.worker_sg_id
 }
 
 output "launch_template_id" {
