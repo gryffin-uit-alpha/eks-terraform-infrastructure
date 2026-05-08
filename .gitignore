@@ -37,4 +37,5 @@ Thumbs.db
 *.crt
 secrets/
 scripts/
+tfplan*.tfplan
 tfplan
