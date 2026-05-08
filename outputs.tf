@@ -59,6 +59,11 @@ output "velero_irsa_role_arn" {
   value       = module.iam.velero_role_arn
 }
 
+output "ebs_csi_driver_role_arn" {
+  description = "ARN của IAM Role cho EBS CSI Driver (IRSA)"
+  value       = module.iam.ebs_csi_driver_role_arn
+}
+
 # ── Velero S3 ─────────────────────────────────────────────────────────────────
 output "velero_bucket_name" {
   description = "Tên S3 bucket Velero backup"

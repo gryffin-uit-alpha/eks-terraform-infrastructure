@@ -15,7 +15,7 @@ module "vpc" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   cluster_name         = var.cluster_name
-  single_nat_gateway   = true # 1 NAT GW dùng chung (production cost saving)
+  single_nat_gateway   = false # ✅ FIXED: 3 NAT GWs (1 per AZ) for HA
 }
 
 # ── [2] Velero S3 (cần ARN trước khi tạo IAM policy) ─────────────────────────
