@@ -20,6 +20,13 @@ resource "aws_security_group" "cluster" {
   tags = { Name = "${local.name}-eks-cluster-sg" }
 }
 
+# ── EKS Cluster Log Group ─────────────────────────────────────────────────────
+# Đưa Log Group vào quản lý của Terraform để tránh bị sót lại khi destroy.
+resource "aws_cloudwatch_log_group" "eks" {
+  name              = "/aws/eks/${var.cluster_name}/cluster"
+  retention_in_days = 7 # Giới hạn lưu trữ để tiết kiệm chi phí
+}
+
 # ── EKS Cluster ───────────────────────────────────────────────────────────────
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
@@ -47,5 +54,17 @@ resource "aws_eks_cluster" "this" {
   # (sẽ dùng aws_eks_addon resource riêng)
 
   tags = { Name = var.cluster_name }
+
+  # Đảm bảo Log Group được tạo TRƯỚC và xóa SAU cluster
+  depends_on = [aws_cloudwatch_log_group.eks]
+
+  # Ignore changes to VPC config when already set correctly
+  lifecycle {
+    ignore_changes = [
+      vpc_config[0].endpoint_private_access,
+      vpc_config[0].endpoint_public_access,
+      vpc_config[0].public_access_cidrs
+    ]
+  }
 }
 

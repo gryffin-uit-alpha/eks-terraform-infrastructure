@@ -77,7 +77,7 @@ variable "cluster_endpoint_public_access_cidrs" {
 variable "node_group_instance_types" {
   description = "EC2 instance types cho managed node group"
   type        = list(string)
-  default     = ["t3.small"] # Free tier eligible
+  default     = ["m7i-flex.large"]
 }
 
 variable "node_group_desired_size" {

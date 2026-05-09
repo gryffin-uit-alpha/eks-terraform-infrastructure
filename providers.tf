@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/cloudinit"
       version = "~> 2.3"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.27"
+    }
   }
 }
 
@@ -41,5 +45,25 @@ provider "aws" {
       Environment = var.environment
       ManagedBy   = "terraform"
     }
+  }
+}
+
+# ── Kubernetes Provider (for managing K8s resources via Terraform) ────────────
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  # Use AWS CLI to get authentication token
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = [
+      "eks",
+      "get-token",
+      "--cluster-name",
+      module.eks.cluster_name,
+      "--region",
+      var.aws_region
+    ]
   }
 }

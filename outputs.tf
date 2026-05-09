@@ -80,3 +80,14 @@ output "karpenter_sqs_queue_arn" {
   description = "ARN của SQS queue cho Karpenter"
   value       = module.karpenter_infra.sqs_queue_arn
 }
+
+# ── Storage Classes ───────────────────────────────────────────────────────────
+output "default_storage_class" {
+  description = "Tên của default StorageClass (gp3)"
+  value       = module.storage_classes.default_storage_class
+}
+
+output "storage_classes" {
+  description = "Danh sách tất cả StorageClasses được tạo"
+  value       = module.storage_classes.storage_classes
+}
