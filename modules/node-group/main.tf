@@ -141,6 +141,15 @@ resource "aws_security_group" "nodes" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  # Pod to pod egress across nodes (VPC CIDR)
+  egress {
+    description = "Pod to pod across nodes (VPC CIDR)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
   # HTTPS ra internet qua NAT (để gọi AWS API: EKS, EC2, SSM...)
   egress {
     description = "HTTPS to AWS APIs"

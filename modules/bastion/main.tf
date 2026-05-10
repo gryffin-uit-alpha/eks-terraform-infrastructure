@@ -73,6 +73,7 @@ locals {
     "registry.k8s.io/metrics-server/metrics-server:v0.7.0",
     # Kyverno Cleanup Jobs
     "docker.io/bitnami/kubectl:1.28.5",
+    "docker.io/bitnami/kubectl:latest",
   ]
 
   user_data = base64encode(templatefile("${path.module}/templates/user_data.sh.tpl", {
