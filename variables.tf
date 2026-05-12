@@ -20,13 +20,13 @@ variable "environment" {
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "ap-southeast-1"
 }
 
 variable "availability_zones" {
   description = "Danh sách AZ để deploy (3 AZs cho production HA)"
   type        = list(string)
-  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  default     = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
 }
 
 # ── Networking ────────────────────────────────────────────────────────────────
