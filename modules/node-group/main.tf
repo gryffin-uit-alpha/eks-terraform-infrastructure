@@ -27,6 +27,8 @@ locals {
             endpoint = ["http://${local.registry_address}"]
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."public.ecr.aws"]
             endpoint = ["http://${local.registry_address}"]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${local.registry_address}"]
+            endpoint = ["http://${local.registry_address}"]
         [plugins."io.containerd.grpc.v1.cri".registry.configs]
           [plugins."io.containerd.grpc.v1.cri".registry.configs."${local.registry_address}".tls]
             insecure_skip_verify = true

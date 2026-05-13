@@ -71,9 +71,10 @@ locals {
     "docker.io/grafana/grafana:10.4.0",
     # Metrics server
     "registry.k8s.io/metrics-server/metrics-server:v0.7.0",
-    # Kyverno Cleanup Jobs - using kubectl image that actually exists
-    "docker.io/bitnami/kubectl:1.28",
-    "docker.io/bitnami/kubectl:1.30",
+    # Kubectl images for Kyverno cleanup jobs and Velero upgrade
+    "public.ecr.aws/bitnami/kubectl:1.30.1",
+    # Velero AWS plugin
+    "docker.io/velero/velero-plugin-for-aws:v1.9.0",
   ]
 
   user_data = base64encode(templatefile("${path.module}/templates/user_data.sh.tpl", {
