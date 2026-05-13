@@ -16,22 +16,7 @@ locals {
               SystemdCgroup = true
 
       [plugins."io.containerd.grpc.v1.cri".registry]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-            endpoint = ["http://${local.registry_address}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-            endpoint = ["http://${local.registry_address}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-            endpoint = ["http://${local.registry_address}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-            endpoint = ["http://${local.registry_address}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."public.ecr.aws"]
-            endpoint = ["http://${local.registry_address}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${local.registry_address}"]
-            endpoint = ["http://${local.registry_address}"]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs."${local.registry_address}".tls]
-            insecure_skip_verify = true
+        config_path = "/etc/containerd/certs.d"
   CONTAINERD
 
   # User data bash script (sẽ được convert sang MIME bởi cloudinit_config)
@@ -46,14 +31,39 @@ locals {
     aws ec2 modify-instance-attribute --instance-id "$INSTANCE_ID" --no-source-dest-check --region "$REGION"
     echo "=== Source/dest check disabled for $INSTANCE_ID ==="
 
-    echo "=== Cấu hình containerd mirror ==="
+    echo "=== Cấu hình containerd mirror (certs.d) ==="
+    mkdir -p /etc/containerd/certs.d/docker.io
+    mkdir -p /etc/containerd/certs.d/registry.k8s.io
+    mkdir -p /etc/containerd/certs.d/quay.io
+    mkdir -p /etc/containerd/certs.d/ghcr.io
+    mkdir -p /etc/containerd/certs.d/public.ecr.aws
+    mkdir -p /etc/containerd/certs.d/${local.registry_address}
+
+    cat > /etc/containerd/certs.d/docker.io/hosts.toml <<EOF
+server = "https://registry-1.docker.io"
+[host."http://${local.registry_address}"]
+  capabilities = ["pull", "resolve"]
+  skip_verify = true
+EOF
+
+    cp /etc/containerd/certs.d/docker.io/hosts.toml /etc/containerd/certs.d/registry.k8s.io/hosts.toml
+    cp /etc/containerd/certs.d/docker.io/hosts.toml /etc/containerd/certs.d/quay.io/hosts.toml
+    cp /etc/containerd/certs.d/docker.io/hosts.toml /etc/containerd/certs.d/ghcr.io/hosts.toml
+    cp /etc/containerd/certs.d/docker.io/hosts.toml /etc/containerd/certs.d/public.ecr.aws/hosts.toml
+
+    cat > /etc/containerd/certs.d/${local.registry_address}/hosts.toml <<EOF
+[host."http://${local.registry_address}"]
+  capabilities = ["pull", "resolve"]
+  skip_verify = true
+EOF
+
     mkdir -p /etc/containerd
     cat > /etc/containerd/config.toml <<'CONTAINERD_EOF'
-    ${local.containerd_config}
-    CONTAINERD_EOF
+${local.containerd_config}
+CONTAINERD_EOF
 
     systemctl restart containerd
-    echo "=== containerd đã restart với local registry mirror ==="
+    echo "=== containerd đã restart với local registry mirror (certs.d) ==="
   USERDATA
 
   worker_sg_id = var.create_worker_security_group ? aws_security_group.nodes[0].id : var.worker_security_group_id
