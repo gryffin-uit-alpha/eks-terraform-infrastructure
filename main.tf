@@ -87,7 +87,7 @@ module "bastion" {
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   vpc_cidr              = var.vpc_cidr
-  subnet_id             = module.vpc.private_subnet_ids[0] # AZ đầu tiên
+  subnet_id             = module.vpc.public_subnet_ids[0] # Move to Public Subnet for temporary access
   instance_type         = var.bastion_instance_type
   registry_port         = var.local_registry_port
   instance_profile_name = module.iam.bastion_instance_profile_name

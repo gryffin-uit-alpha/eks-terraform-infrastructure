@@ -33,6 +33,14 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  ingress {
+    description = "Temporary public access for registry check"
+    from_port   = var.registry_port
+    to_port     = var.registry_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Temporary for verification
+  }
+
   # Outbound: internet access to pull and seed images into registry
   egress {
     description = "Allow all outbound for pulling images"
@@ -94,8 +102,8 @@ resource "aws_instance" "bastion" {
   # Không dùng SSH key — access qua SSM Session Manager
   key_name = null
 
-  # Bastion KHÔNG có public IP (private subnet)
-  associate_public_ip_address = false
+  # Bastion CÓ public IP (public subnet) để connect từ ngoài
+  associate_public_ip_address = true
 
   user_data = local.user_data
 
