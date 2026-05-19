@@ -64,6 +64,11 @@ output "ebs_csi_driver_role_arn" {
   value       = module.iam.ebs_csi_driver_role_arn
 }
 
+output "aws_lb_controller_role_arn" {
+  description = "ARN của IAM Role cho AWS Load Balancer Controller (IRSA)"
+  value       = module.iam.aws_lb_controller_role_arn
+}
+
 # ── Velero S3 ─────────────────────────────────────────────────────────────────
 output "velero_bucket_name" {
   description = "Tên S3 bucket Velero backup"

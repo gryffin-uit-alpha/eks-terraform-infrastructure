@@ -42,3 +42,8 @@ output "oidc_provider_url" {
   description = "URL of the OIDC Provider for EKS (without https://)"
   value       = local.oidc_provider_url
 }
+
+output "aws_lb_controller_role_arn" {
+  description = "ARN of the AWS Load Balancer Controller IRSA role"
+  value       = length(aws_iam_role.aws_lb_controller) > 0 ? aws_iam_role.aws_lb_controller[0].arn : ""
+}
